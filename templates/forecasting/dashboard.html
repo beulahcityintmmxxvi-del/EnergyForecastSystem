@@ -1,0 +1,161 @@
+{% extends 'base.html' %}
+
+{% block title %}Energy Forecasting | Energy Forecast System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+    <div>
+        <h1 class="page-title">Energy Demand Forecasting</h1>
+        <p class="page-subtitle">Train ML models to project future institutional energy demand.</p>
+    </div>
+    <button type="button" class="btn btn-success d-flex align-items-center"
+            data-bs-toggle="modal" data-bs-target="#newForecastModal">
+        <i class="fa-solid fa-wand-magic-sparkles me-2"></i>Generate New Forecast
+    </button>
+</div>
+
+<!-- Stats -->
+<div class="row g-3 mb-4">
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card stat-card p-3 shadow-sm border-0">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <span class="text-muted small fw-semibold">Total Forecasts</span>
+                    <h3 class="fw-bold mb-0 mt-1">{{ total_runs }}</h3>
+                </div>
+                <div class="stat-icon bg-soft-primary"><i class="fa-solid fa-chart-line"></i></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card stat-card p-3 shadow-sm border-0">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <span class="text-muted small fw-semibold">Latest Accuracy</span>
+                    <h3 class="fw-bold mb-0 mt-1 text-success">
+                        {% if latest and latest.accuracy %}{{ latest.accuracy|floatformat:1 }}%{% else %}N/A{% endif %}
+                    </h3>
+                </div>
+                <div class="stat-icon bg-soft-success"><i class="fa-solid fa-bullseye"></i></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card stat-card p-3 shadow-sm border-0">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <span class="text-muted small fw-semibold">Latest MAPE</span>
+                    <h3 class="fw-bold mb-0 mt-1 text-warning">
+                        {% if latest and latest.mape %}{{ latest.mape|floatformat:1 }}%{% else %}N/A{% endif %}
+                    </h3>
+                </div>
+                <div class="stat-icon bg-soft-warning"><i class="fa-solid fa-gauge-high"></i></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card stat-card p-3 shadow-sm border-0">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <span class="text-muted small fw-semibold">Latest Building</span>
+                    <h5 class="fw-bold mb-0 mt-1 text-truncate" style="max-width:140px;">
+                        {% if latest %}{{ latest.building.name }}{% else %}None{% endif %}
+                    </h5>
+                </div>
+                <div class="stat-icon bg-soft-danger"><i class="fa-solid fa-building"></i></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Chart -->
+{% if chart_html %}
+<div class="card content-card p-4 shadow-sm border-0 mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold mb-0"><i class="fa-solid fa-chart-area me-2 text-success"></i>Latest Projection</h5>
+        <a href="{% url 'forecast_detail' latest.pk %}" class="btn btn-sm btn-outline-success">
+            View Details <i class="fa-solid fa-arrow-right ms-1"></i>
+        </a>
+    </div>
+    <div class="w-100" style="min-height:420px;">{{ chart_html|safe }}</div>
+</div>
+{% endif %}
+
+<!-- History Table -->
+<div class="card content-card p-4 shadow-sm border-0">
+    <h5 class="fw-bold mb-3"><i class="fa-solid fa-clock-rotate-left me-2 text-muted"></i>Recent Forecast Runs</h5>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Building</th>
+                    <th>Period</th>
+                    <th>MAPE (%)</th>
+                    <th>Accuracy (%)</th>
+                    <th>RMSE (kWh)</th>
+                    <th>Generated</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for run in runs %}
+                <tr>
+                    <td class="fw-semibold">{{ run.building.name }}</td>
+                    <td>{{ run.periods }} Days</td>
+                    <td>
+                        {% if run.mape is not None %}
+                            <span class="badge bg-success-subtle text-success border border-success-subtle">{{ run.mape|floatformat:1 }}%</span>
+                        {% else %}-{% endif %}
+                    </td>
+                    <td>
+                        {% if run.accuracy is not None %}
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle">{{ run.accuracy|floatformat:1 }}%</span>
+                        {% else %}-{% endif %}
+                    </td>
+                    <td>{% if run.rmse is not None %}{{ run.rmse|floatformat:1 }}{% else %}-{% endif %}</td>
+                    <td class="small text-muted">{{ run.generated_at|date:"M d, Y H:i" }}</td>
+                    <td class="text-end">
+                        <a href="{% url 'forecast_detail' run.pk %}" class="btn btn-sm btn-outline-success">
+                            <i class="fa-solid fa-eye me-1"></i>View
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" class="text-center py-4 text-muted">No forecasts yet. Click "Generate New Forecast" to start.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="newForecastModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-wand-magic-sparkles me-2"></i>Generate Forecast</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'run_forecast' %}">
+                {% csrf_token %}
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Target Building</label>
+                        {{ form.building }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Forecast Period (Days)</label>
+                        {{ form.periods }}
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success" data-show-loader="true">
+                        <i class="fa-solid fa-play me-2"></i>Run Model
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

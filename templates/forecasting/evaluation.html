@@ -1,0 +1,253 @@
+{% extends 'base.html' %}
+
+{% block title %}Forecast Evaluation | Energy Forecast System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .chart-wrapper {
+        position: relative;
+        width: 100%;
+        height: 340px;
+    }
+
+    @media (max-width: 768px) {
+        .chart-wrapper {
+            height: 280px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+    <div>
+        <h1 class="page-title">Forecast Evaluation</h1>
+        <p class="page-subtitle">
+            Evaluate Prophet forecast accuracy using hold-out historical data.
+        </p>
+    </div>
+
+    <div class="d-flex gap-2 flex-wrap">
+        <a href="{% url 'forecast_dashboard' %}" class="btn btn-outline-primary">
+            <i class="fa-solid fa-chart-line me-2"></i>Forecast Dashboard
+        </a>
+
+        {% if selected_building_pk %}
+        <a href="{% url 'forecast_evaluation_export_pdf' %}?building={{ selected_building_pk }}&test_days={{ test_days }}" class="btn btn-outline-danger">
+            <i class="fa-solid fa-file-pdf me-2"></i>Export PDF
+        </a>
+        {% else %}
+        <a href="{% url 'forecast_evaluation_export_pdf' %}?test_days={{ test_days }}" class="btn btn-outline-danger">
+            <i class="fa-solid fa-file-pdf me-2"></i>Export PDF
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+{% if not prophet_available %}
+<div class="alert alert-warning">
+    <strong>Prophet is not installed.</strong> Evaluation will not work until you install it:
+    <code>pip install prophet</code>
+</div>
+{% endif %}
+
+<div class="card content-card p-4 mb-4">
+    <form method="get">
+        <div class="row g-3 align-items-end">
+            <div class="col-12 col-md-5">
+                <label class="form-label">Building</label>
+                {{ form.building }}
+            </div>
+
+            <div class="col-12 col-md-4">
+                <label class="form-label">Test Period (Days)</label>
+                {{ form.test_days }}
+            </div>
+
+            <div class="col-12 col-md-3">
+                <button type="submit" class="btn btn-success w-100">
+                    <i class="fa-solid fa-vial me-2"></i>Run Evaluation
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+{% if evaluation_ready %}
+<div class="row g-4 mb-4">
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card stat-card p-3">
+            <small class="text-muted">Selected Scope</small>
+            <h3 class="mb-0">{{ selected_building_label }}</h3>
+        </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card stat-card p-3">
+            <small class="text-muted">MAE</small>
+            <h3 class="mb-0">{{ metrics.mae|floatformat:2 }}</h3>
+        </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card stat-card p-3">
+            <small class="text-muted">RMSE</small>
+            <h3 class="mb-0">{{ metrics.rmse|floatformat:2 }}</h3>
+        </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card stat-card p-3">
+            <small class="text-muted">Accuracy</small>
+            <h3 class="mb-0">
+                {% if metrics.accuracy is not None %}
+                    {{ metrics.accuracy|floatformat:2 }}%
+                {% else %}
+                    -
+                {% endif %}
+            </h3>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-12 col-lg-8">
+        <div class="card content-card p-3">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h5 class="mb-0">Actual vs Predicted Chart</h5>
+                <span class="badge text-bg-success">Test Period: {{ test_days }} days</span>
+            </div>
+
+            <div class="chart-wrapper">
+                <canvas id="evaluationChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-lg-4">
+        <div class="card content-card p-3 h-100">
+            <h5 class="mb-3">Evaluation Summary</h5>
+            <p class="mb-2"><strong>Scope:</strong> {{ selected_building_label }}</p>
+            <p class="mb-2"><strong>Available History Points:</strong> {{ scope_records }}</p>
+            <p class="mb-2"><strong>Test Days:</strong> {{ test_days }}</p>
+            <p class="mb-2"><strong>MAPE:</strong>
+                {% if metrics.mape is not None %}
+                    {{ metrics.mape|floatformat:2 }}%
+                {% else %}
+                    -
+                {% endif %}
+            </p>
+            <p class="mb-0 text-muted">
+                Lower MAE/RMSE and higher accuracy indicate a better forecasting fit.
+            </p>
+        </div>
+    </div>
+</div>
+
+<div class="card content-card p-3">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <h5 class="mb-0">Evaluation Table</h5>
+        <span class="badge text-bg-light border">Actual vs Predicted</span>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Date</th>
+                    <th>Actual (kWh)</th>
+                    <th>Predicted (kWh)</th>
+                    <th>Absolute Error</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in evaluation_rows %}
+                <tr>
+                    <td>{{ row.ds }}</td>
+                    <td>{{ row.actual }}</td>
+                    <td>{{ row.predicted }}</td>
+                    <td>{{ row.abs_error }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="text-center py-4 text-muted">
+                        No evaluation data available.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<div class="alert alert-info">
+    Select a building or use all buildings, then run evaluation to measure forecast accuracy.
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{% if evaluation_ready %}
+<script>
+    const labels = JSON.parse('{{ chart_labels_json|escapejs }}');
+    const actualValues = JSON.parse('{{ actual_values_json|escapejs }}');
+    const predictedValues = JSON.parse('{{ predicted_values_json|escapejs }}');
+
+    const ctx = document.getElementById('evaluationChart');
+
+    if (ctx) {
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Actual',
+                        data: actualValues,
+                        borderColor: '#2563eb',
+                        backgroundColor: 'rgba(37, 99, 235, 0.10)',
+                        tension: 0.35,
+                        fill: false,
+                        spanGaps: true
+                    },
+                    {
+                        label: 'Predicted',
+                        data: predictedValues,
+                        borderColor: '#16a34a',
+                        backgroundColor: 'rgba(22, 163, 74, 0.10)',
+                        borderDash: [8, 6],
+                        tension: 0.35,
+                        fill: false,
+                        spanGaps: true
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Energy Consumption (kWh)'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Date'
+                        }
+                    }
+                }
+            }
+        });
+    }
+</script>
+{% endif %}
+{% endblock %}

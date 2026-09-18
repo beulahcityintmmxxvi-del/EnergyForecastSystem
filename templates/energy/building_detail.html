@@ -1,0 +1,210 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ building.name }} | Energy Forecast System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .chart-wrapper {
+        position: relative;
+        width: 100%;
+        height: 320px;
+    }
+
+    @media (max-width: 768px) {
+        .chart-wrapper {
+            height: 260px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+    <div>
+        <h1 class="page-title">{{ building.name }}</h1>
+        <p class="page-subtitle">
+            {% if building.code %}Code: {{ building.code }}{% else %}Building analytics and consumption summary{% endif %}
+        </p>
+    </div>
+
+    <div class="d-flex gap-2 flex-wrap">
+        <a href="{% url 'building_list' %}" class="btn btn-outline-secondary">
+            <i class="fa-solid fa-arrow-left me-2"></i>Back to Buildings
+        </a>
+        <a href="{% url 'building_forecast' building.pk %}" class="btn btn-outline-primary">
+            <i class="fa-solid fa-chart-line me-2"></i>Forecast Building
+        </a>
+        <a href="{% url 'energy_create' %}" class="btn btn-primary">
+            <i class="fa-solid fa-plus me-2"></i>Add Energy Record
+        </a>
+    </div>
+</div>
+
+{% if building.description %}
+<div class="card content-card p-4 mb-4">
+    <h5 class="mb-2">Description</h5>
+    <p class="mb-0 text-muted">{{ building.description }}</p>
+</div>
+{% endif %}
+
+<div class="row g-4 mb-4">
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card stat-card p-3">
+            <small class="text-muted">Total Records</small>
+            <h3 class="mb-0">{{ total_records }}</h3>
+        </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card stat-card p-3">
+            <small class="text-muted">Total Consumption</small>
+            <h3 class="mb-0">{{ total_consumption|floatformat:2 }} kWh</h3>
+        </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card stat-card p-3">
+            <small class="text-muted">Average Consumption</small>
+            <h3 class="mb-0">{{ avg_consumption|floatformat:2 }} kWh</h3>
+        </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card stat-card p-3">
+            <small class="text-muted">Latest Reading</small>
+            <h3 class="mb-0">
+                {% if latest_reading %}
+                    {{ latest_reading.reading_date }}
+                {% else %}
+                    -
+                {% endif %}
+            </h3>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-12 col-lg-8">
+        <div class="card content-card p-3">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h5 class="mb-0">Monthly Consumption Trend</h5>
+                <span class="badge text-bg-success">Building Analytics</span>
+            </div>
+
+            {% if has_chart_data %}
+            <div class="chart-wrapper">
+                <canvas id="buildingTrendChart"></canvas>
+            </div>
+            {% else %}
+            <div class="alert alert-info mb-0">
+                No enough energy data available yet for charting.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="col-12 col-lg-4">
+        <div class="card content-card p-3 h-100">
+            <h5 class="mb-3">Quick Info</h5>
+            <div class="mb-3">
+                <small class="text-muted">Building Name</small>
+                <div class="fw-semibold">{{ building.name }}</div>
+            </div>
+
+            <div class="mb-3">
+                <small class="text-muted">Building Code</small>
+                <div class="fw-semibold">{{ building.code|default:"-" }}</div>
+            </div>
+
+            <div class="mb-0">
+                <small class="text-muted">Total Records</small>
+                <div class="fw-semibold">{{ total_records }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card content-card p-3">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <h5 class="mb-0">Latest Records</h5>
+        <span class="badge text-bg-light border">Recent 10</span>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Date</th>
+                    <th>Meter ID</th>
+                    <th>Consumption (kWh)</th>
+                    <th>Cost</th>
+                    <th>Peak Demand (kW)</th>
+                    <th>Remarks</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in latest_records %}
+                <tr>
+                    <td>{{ record.reading_date }}</td>
+                    <td>{{ record.meter_id|default:"-" }}</td>
+                    <td>{{ record.consumption_kwh }}</td>
+                    <td>{{ record.cost|default:"-" }}</td>
+                    <td>{{ record.peak_demand_kw|default:"-" }}</td>
+                    <td>{{ record.remarks|default:"-"|truncatechars:35 }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center py-4 text-muted">
+                        No records found for this building.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if has_chart_data %}
+<script>
+    const labels = JSON.parse('{{ chart_labels_json|escapejs }}');
+    const values = JSON.parse('{{ chart_values_json|escapejs }}');
+
+    const ctx = document.getElementById('buildingTrendChart');
+
+    if (ctx) {
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Consumption (kWh)',
+                    data: values,
+                    borderColor: '#2563eb',
+                    backgroundColor: 'rgba(37, 99, 235, 0.12)',
+                    fill: true,
+                    tension: 0.35,
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+</script>
+{% endif %}
+{% endblock %}

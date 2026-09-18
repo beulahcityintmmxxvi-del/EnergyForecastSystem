@@ -1,0 +1,219 @@
+{% extends 'base.html' %}
+
+{% block title %}Building Comparison | Energy Forecast System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .chart-wrapper {
+        position: relative;
+        width: 100%;
+        height: 340px;
+    }
+
+    @media (max-width: 768px) {
+        .chart-wrapper {
+            height: 260px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+    <div>
+        <h1 class="page-title">Building Comparison</h1>
+        <p class="page-subtitle">
+            Compare the highest energy-consuming buildings in the institution.
+        </p>
+    </div>
+
+    <form method="get" class="d-flex gap-2 align-items-end flex-wrap">
+        <div>
+            <label class="form-label mb-1">Top Buildings</label>
+            <select name="limit" class="form-select">
+                <option value="3" {% if selected_limit == 3 %}selected{% endif %}>Top 3</option>
+                <option value="5" {% if selected_limit == 5 %}selected{% endif %}>Top 5</option>
+                <option value="10" {% if selected_limit == 10 %}selected{% endif %}>Top 10</option>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-success">
+            <i class="fa-solid fa-chart-column me-2"></i>Compare
+        </button>
+    </form>
+</div>
+
+{% if has_chart_data %}
+<div class="row g-4 mb-4">
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card stat-card p-3">
+            <small class="text-muted">Institution Total</small>
+            <h3 class="mb-0">{{ institution_total|floatformat:2 }} kWh</h3>
+        </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card stat-card p-3">
+            <small class="text-muted">Compared Buildings</small>
+            <h3 class="mb-0">{{ comparison_rows|length }}</h3>
+        </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card stat-card p-3">
+            <small class="text-muted">Highest Consumer</small>
+            <h3 class="mb-0">{{ highest_building|default:"-" }}</h3>
+        </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card stat-card p-3">
+            <small class="text-muted">Top Building Usage</small>
+            <h3 class="mb-0">{{ highest_value|floatformat:2 }} kWh</h3>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-12 col-lg-8">
+        <div class="card content-card p-3">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h5 class="mb-0">Consumption Comparison Chart</h5>
+                <span class="badge text-bg-success">Top {{ selected_limit }}</span>
+            </div>
+
+            <div class="chart-wrapper">
+                <canvas id="comparisonChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-lg-4">
+        <div class="card content-card p-3 h-100">
+            <h5 class="mb-3">Key Insights</h5>
+            <div class="mb-3">
+                <small class="text-muted">Institution Records</small>
+                <div class="fw-semibold">{{ institution_records }}</div>
+            </div>
+
+            <div class="mb-3">
+                <small class="text-muted">Top Buildings Total</small>
+                <div class="fw-semibold">{{ compare_total|floatformat:2 }} kWh</div>
+            </div>
+
+            <div class="mb-3">
+                <small class="text-muted">Remaining Consumption</small>
+                <div class="fw-semibold">{{ remaining_total|floatformat:2 }} kWh</div>
+            </div>
+
+            <p class="text-muted mb-0">
+                This page helps identify which buildings use the most electricity and how much they contribute to the institution's total consumption.
+            </p>
+        </div>
+    </div>
+</div>
+
+<div class="card content-card p-3">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <h5 class="mb-0">Comparison Table</h5>
+        <span class="badge text-bg-light border">Sorted by highest consumption</span>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Rank</th>
+                    <th>Building</th>
+                    <th>Code</th>
+                    <th>Records</th>
+                    <th>Total Consumption (kWh)</th>
+                    <th>Average Consumption (kWh)</th>
+                    <th>Share of Institution</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in comparison_rows %}
+                <tr>
+                    <td>{{ row.rank }}</td>
+                    <td class="fw-semibold">{{ row.name }}</td>
+                    <td>{{ row.code|default:"-" }}</td>
+                    <td>{{ row.records_count }}</td>
+                    <td>{{ row.total_consumption|floatformat:2 }}</td>
+                    <td>{{ row.avg_consumption|floatformat:2 }}</td>
+                    <td>{{ row.share|floatformat:2 }}%</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center py-4 text-muted">
+                        No buildings with energy records available for comparison.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<div class="alert alert-info">
+    No building data available yet for comparison.
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{% if has_chart_data %}
+<script>
+    const labels = JSON.parse('{{ chart_labels_json|escapejs }}');
+    const values = JSON.parse('{{ chart_values_json|escapejs }}');
+
+    const ctx = document.getElementById('comparisonChart');
+
+    if (ctx) {
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Total Consumption (kWh)',
+                    data: values,
+                    backgroundColor: [
+                        'rgba(37, 99, 235, 0.75)',
+                        'rgba(22, 163, 74, 0.75)',
+                        'rgba(234, 179, 8, 0.75)',
+                        'rgba(239, 68, 68, 0.75)',
+                        'rgba(14, 165, 233, 0.75)',
+                        'rgba(168, 85, 247, 0.75)'
+                    ],
+                    borderColor: '#2563eb',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Energy Consumption (kWh)'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Buildings'
+                        }
+                    }
+                }
+            }
+        });
+    }
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,174 @@
+{% extends 'base.html' %}
+
+{% block title %}All Alerts | Energy Forecast System{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+    <div>
+        <h1 class="page-title">All Alerts</h1>
+        <p class="page-subtitle">Search and manage energy alerts.</p>
+    </div>
+
+    <a href="{% url 'alerts_dashboard' %}" class="btn btn-outline-secondary">
+        <i class="fa-solid fa-gauge-high me-2"></i>Dashboard
+    </a>
+</div>
+
+<div class="card content-card p-4 mb-4">
+    <form method="get">
+        <div class="row g-3">
+            <div class="col-12 col-md-6 col-lg-4">
+                <label class="form-label">Search</label>
+                {{ filter_form.q }}
+            </div>
+
+            <div class="col-12 col-md-6 col-lg-4">
+                <label class="form-label">Building</label>
+                {{ filter_form.building }}
+            </div>
+
+            <div class="col-12 col-md-6 col-lg-2">
+                <label class="form-label">Status</label>
+                {{ filter_form.status }}
+            </div>
+
+            <div class="col-12 col-md-6 col-lg-2">
+                <label class="form-label">Severity</label>
+                {{ filter_form.severity }}
+            </div>
+
+            <div class="col-12 col-md-6 col-lg-4">
+                <label class="form-label">Sort By</label>
+                {{ filter_form.ordering }}
+            </div>
+        </div>
+
+        <div class="d-flex gap-2 flex-wrap mt-4">
+            <button type="submit" class="btn btn-success">
+                <i class="fa-solid fa-filter me-2"></i>Apply Filters
+            </button>
+            <a href="{% url 'alert_list' %}" class="btn btn-outline-secondary">
+                Reset
+            </a>
+        </div>
+    </form>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-12 col-sm-6 col-xl-4">
+        <div class="card stat-card p-3">
+            <small class="text-muted">Matching Alerts</small>
+            <h3 class="mb-0">{{ total_matching }}</h3>
+        </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-xl-4">
+        <div class="card stat-card p-3">
+            <small class="text-muted">Open Alerts</small>
+            <h3 class="mb-0">{{ open_matching }}</h3>
+        </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-xl-4">
+        <div class="card stat-card p-3">
+            <small class="text-muted">Critical Alerts</small>
+            <h3 class="mb-0">{{ critical_matching }}</h3>
+        </div>
+    </div>
+</div>
+
+<div class="card content-card p-3">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Title</th>
+                    <th>Building</th>
+                    <th>Type</th>
+                    <th>Severity</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                    <th>Message</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for alert in alerts %}
+                <tr>
+                    <td class="fw-semibold">{{ alert.title }}</td>
+                    <td>{{ alert.building.name }}</td>
+                    <td>{{ alert.get_alert_type_display }}</td>
+                    <td>
+                        {% if alert.severity == 'critical' %}
+                            <span class="badge text-bg-danger">Critical</span>
+                        {% elif alert.severity == 'warning' %}
+                            <span class="badge text-bg-warning">Warning</span>
+                        {% else %}
+                            <span class="badge text-bg-info">Info</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if alert.status == 'open' %}
+                            <span class="badge text-bg-success">Open</span>
+                        {% else %}
+                            <span class="badge text-bg-secondary">Resolved</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ alert.created_at|date:"Y-m-d H:i" }}</td>
+                    <td>{{ alert.message|truncatechars:45 }}</td>
+                    <td class="text-end">
+                        {% if alert.status == 'open' and can_manage %}
+                        <form method="post" action="{% url 'resolve_alert' alert.pk %}" class="d-inline">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                            <button type="submit" class="btn btn-sm btn-outline-success">
+                                Resolve
+                            </button>
+                        </form>
+                        {% else %}
+                        <span class="text-muted small">-</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="text-center py-4 text-muted">
+                        No alerts found for the selected filters.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if alerts.has_other_pages %}
+    <nav class="mt-4">
+        <ul class="pagination justify-content-center flex-wrap mb-0">
+            {% if alerts.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1{% if query_string %}&{{ query_string }}{% endif %}">First</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ alerts.previous_page_number }}{% if query_string %}&{{ query_string }}{% endif %}">Previous</a>
+                </li>
+            {% endif %}
+
+            <li class="page-item active">
+                <span class="page-link">
+                    Page {{ alerts.number }} of {{ alerts.paginator.num_pages }}
+                </span>
+            </li>
+
+            {% if alerts.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ alerts.next_page_number }}{% if query_string %}&{{ query_string }}{% endif %}">Next</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ alerts.paginator.num_pages }}{% if query_string %}&{{ query_string }}{% endif %}">Last</a>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}

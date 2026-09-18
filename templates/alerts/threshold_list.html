@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+
+{% block title %}Thresholds | Energy Forecast System{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+    <div>
+        <h1 class="page-title">Thresholds</h1>
+        <p class="page-subtitle">Manage building-specific alert thresholds.</p>
+    </div>
+
+    <div class="d-flex gap-2 flex-wrap">
+        <a href="{% url 'alerts_dashboard' %}" class="btn btn-outline-secondary">
+            <i class="fa-solid fa-gauge-high me-2"></i>Alerts Dashboard
+        </a>
+
+        {% if can_admin %}
+        <a href="{% url 'threshold_create' %}" class="btn btn-success">
+            <i class="fa-solid fa-plus me-2"></i>Add Threshold
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card content-card p-3">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Building</th>
+                    <th>Monthly Threshold (kWh)</th>
+                    <th>Spike Threshold (%)</th>
+                    <th>Active</th>
+                    <th>Notes</th>
+                    {% if can_admin %}
+                    <th class="text-end">Actions</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for threshold in thresholds %}
+                <tr>
+                    <td class="fw-semibold">{{ threshold.building.name }}</td>
+                    <td>{{ threshold.monthly_threshold_kwh }}</td>
+                    <td>{{ threshold.spike_threshold_percent }}%</td>
+                    <td>
+                        {% if threshold.active %}
+                            <span class="badge text-bg-success">Active</span>
+                        {% else %}
+                            <span class="badge text-bg-secondary">Inactive</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ threshold.notes|default:"-"|truncatechars:40 }}</td>
+                    {% if can_admin %}
+                    <td class="text-end">
+                        <a href="{% url 'threshold_update' threshold.pk %}" class="btn btn-sm btn-outline-primary">
+                            <i class="fa-solid fa-pen-to-square"></i>
+                        </a>
+                    </td>
+                    {% endif %}
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="{% if can_admin %}6{% else %}5{% endif %}" class="text-center py-4 text-muted">
+                        No thresholds configured yet.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+
+{% block title %}Forecast: {{ run.building.name }} | Energy Forecast System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+    <div>
+        <a href="{% url 'forecast_dashboard' %}" class="btn btn-sm btn-outline-secondary mb-2">
+            <i class="fa-solid fa-arrow-left me-1"></i>Back
+        </a>
+        <h1 class="page-title">{{ run.building.name }} — Demand Forecast</h1>
+        <p class="page-subtitle">{{ run.periods }}-day horizon • Generated {{ run.generated_at|date:"M d, Y H:i" }}</p>
+    </div>
+    <a href="{% url 'export_forecast_csv' run.pk %}" class="btn btn-outline-success">
+        <i class="fa-solid fa-file-csv me-2"></i>Export CSV
+    </a>
+</div>
+
+<!-- Metrics -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="card content-card p-3 text-center shadow-sm">
+            <small class="text-muted fw-semibold">MAPE</small>
+            <h3 class="fw-bold text-success mb-0 mt-1">{% if run.mape is not None %}{{ run.mape|floatformat:1 }}%{% else %}-{% endif %}</h3>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card content-card p-3 text-center shadow-sm">
+            <small class="text-muted fw-semibold">Accuracy</small>
+            <h3 class="fw-bold text-primary mb-0 mt-1">{% if run.accuracy is not None %}{{ run.accuracy|floatformat:1 }}%{% else %}-{% endif %}</h3>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card content-card p-3 text-center shadow-sm">
+            <small class="text-muted fw-semibold">RMSE</small>
+            <h3 class="fw-bold text-warning mb-0 mt-1">{% if run.rmse is not None %}{{ run.rmse|floatformat:1 }} kWh{% else %}-{% endif %}</h3>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card content-card p-3 text-center shadow-sm">
+            <small class="text-muted fw-semibold">MAE</small>
+            <h3 class="fw-bold text-dark mb-0 mt-1">{% if run.mae is not None %}{{ run.mae|floatformat:1 }} kWh{% else %}-{% endif %}</h3>
+        </div>
+    </div>
+</div>
+
+<!-- Chart -->
+{% if chart_html %}
+<div class="card content-card p-4 shadow-sm border-0 mb-4">
+    <div class="w-100" style="min-height:480px;">{{ chart_html|safe }}</div>
+</div>
+{% endif %}
+
+<!-- Daily Values -->
+<div class="card content-card p-4 shadow-sm border-0">
+    <h5 class="fw-bold mb-3"><i class="fa-solid fa-calendar-days me-2 text-success"></i>Daily Predictions</h5>
+    <div class="table-responsive" style="max-height:400px;overflow-y:auto;">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light sticky-top">
+                <tr>
+                    <th>Date</th>
+                    <th>Predicted (kWh)</th>
+                    <th>Lower Bound</th>
+                    <th>Upper Bound</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for v in values %}
+                <tr>
+                    <td class="fw-semibold">{{ v.forecast_date|date:"D, M d, Y" }}</td>
+                    <td class="text-success fw-bold">{{ v.predicted_consumption|floatformat:2 }}</td>
+                    <td class="text-muted">{{ v.lower_bound|floatformat:2 }}</td>
+                    <td class="text-muted">{{ v.upper_bound|floatformat:2 }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4" class="text-center py-3 text-muted">No predictions available.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+
+{% block title %}Alerts | Energy Forecast System{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+    <div>
+        <h1 class="page-title">Alerts Dashboard</h1>
+        <p class="page-subtitle">Monitor spikes, threshold breaches, and unresolved energy alerts.</p>
+    </div>
+
+    <div class="d-flex gap-2 flex-wrap">
+        <a href="{% url 'alert_list' %}" class="btn btn-outline-secondary">
+            <i class="fa-solid fa-list me-2"></i>All Alerts
+        </a>
+
+        <a href="{% url 'threshold_list' %}" class="btn btn-outline-primary">
+            <i class="fa-solid fa-sliders me-2"></i>Thresholds
+        </a>
+
+        {% if can_manage %}
+        <form method="post" action="{% url 'scan_alerts' %}" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-warning">
+                <i class="fa-solid fa-bolt me-2"></i>Scan Existing Records
+            </button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card stat-card p-3">
+            <small class="text-muted">Open Alerts</small>
+            <h3 class="mb-0">{{ total_open }}</h3>
+        </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card stat-card p-3">
+            <small class="text-muted">Critical Alerts</small>
+            <h3 class="mb-0">{{ critical_open }}</h3>
+        </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card stat-card p-3">
+            <small class="text-muted">Warning Alerts</small>
+            <h3 class="mb-0">{{ warning_open }}</h3>
+        </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card stat-card p-3">
+            <small class="text-muted">Thresholds Configured</small>
+            <h3 class="mb-0">{{ thresholds_count }}</h3>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-12 col-lg-8">
+        <div class="card content-card p-3">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h5 class="mb-0">Recent Open Alerts</h5>
+                <span class="badge text-bg-light border">Latest 10</span>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Title</th>
+                            <th>Building</th>
+                            <th>Severity</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                            <th class="text-end">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for alert in recent_alerts %}
+                        <tr>
+                            <td class="fw-semibold">{{ alert.title }}</td>
+                            <td>{{ alert.building.name }}</td>
+                            <td>
+                                {% if alert.severity == 'critical' %}
+                                    <span class="badge text-bg-danger">Critical</span>
+                                {% elif alert.severity == 'warning' %}
+                                    <span class="badge text-bg-warning">Warning</span>
+                                {% else %}
+                                    <span class="badge text-bg-info">Info</span>
+                                {% endif %}
+                            </td>
+                            <td><span class="badge text-bg-success">Open</span></td>
+                            <td>{{ alert.created_at|date:"Y-m-d H:i" }}</td>
+                            <td class="text-end">
+                                <a href="{% url 'alert_list' %}" class="btn btn-sm btn-outline-secondary">
+                                    View All
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center py-4 text-muted">
+                                No open alerts yet.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-lg-4">
+        <div class="card content-card p-3 h-100">
+            <h5 class="mb-3">Quick Notes</h5>
+            <ul class="text-muted mb-0">
+                <li>Alerts are generated when thresholds are exceeded.</li>
+                <li>Spike alerts detect sudden consumption increases.</li>
+                <li>Use the scan button to analyze existing records.</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}

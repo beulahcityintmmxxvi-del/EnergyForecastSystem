@@ -1,0 +1,146 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Create Account | Energy Forecast System</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #0f766e 0%, #14532d 100%);
+        }
+
+        .register-card {
+            border: none;
+            border-radius: 1.5rem;
+            overflow: hidden;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.18);
+        }
+
+        .register-side {
+            background: linear-gradient(180deg, #0f766e 0%, #14532d 100%);
+            color: #fff;
+        }
+
+        .brand-icon {
+            width: 72px;
+            height: 72px;
+            border-radius: 20px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,0.15);
+            font-size: 1.8rem;
+        }
+
+        /* Seamless password input-group border alignment */
+        .input-group > .form-control:not(:last-child) {
+            border-top-right-radius: 0 !important;
+            border-bottom-right-radius: 0 !important;
+        }
+
+        .input-group > .btn:not(:first-child) {
+            border-top-left-radius: 0 !important;
+            border-bottom-left-radius: 0 !important;
+        }
+
+        .password-toggle-btn:hover,
+        .password-toggle-btn:focus,
+        .password-toggle-btn:active {
+            background-color: #f8f9fa !important;
+            border-color: #dee2e6 !important;
+            color: #198754 !important;
+            box-shadow: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container min-vh-100 d-flex align-items-center justify-content-center py-4">
+        <div class="row w-100 justify-content-center">
+            <div class="col-12 col-md-10 col-lg-9 col-xl-8">
+                <div class="card register-card">
+                    <div class="row g-0">
+                        <div class="col-lg-5 register-side d-none d-lg-flex flex-column justify-content-center p-4 p-xl-5">
+                            <div class="brand-icon mb-4">
+                                <i class="fa-solid fa-user-plus"></i>
+                            </div>
+                            <h2 class="fw-bold">Create Account</h2>
+                            <p class="mb-0 text-white-50">
+                                Register a new account to access the energy monitoring and forecasting system.
+                            </p>
+                        </div>
+
+                        <div class="col-lg-7 bg-white p-4 p-md-5">
+                            <h3 class="fw-bold mb-2">Create your account</h3>
+                            <p class="text-muted mb-4">Fill in the form below to get started.</p>
+
+                            <form method="post">
+                                {% csrf_token %}
+
+                                {% if form.errors %}
+                                    <div class="alert alert-danger py-2 small">
+                                        Please correct the errors below and try again.
+                                    </div>
+                                {% endif %}
+
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold small">Username</label>
+                                    {{ form.username }}
+                                    {% if form.username.errors %}
+                                        <div class="text-danger small mt-1">{{ form.username.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold small">Email</label>
+                                    {{ form.email }}
+                                    {% if form.email.errors %}
+                                        <div class="text-danger small mt-1">{{ form.email.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold small">Password</label>
+                                    {{ form.password1 }}
+                                    {% if form.password1.errors %}
+                                        <div class="text-danger small mt-1">{{ form.password1.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold small">Confirm Password</label>
+                                    {{ form.password2 }}
+                                    {% if form.password2.errors %}
+                                        <div class="text-danger small mt-1">{{ form.password2.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+
+                                <button type="submit" class="btn btn-success btn-lg w-100">
+                                    <i class="fa-solid fa-user-plus me-2"></i>Create Account
+                                </button>
+                            </form>
+
+                            <div class="mt-4 text-center small">
+                                <span class="text-muted">Already have an account?</span>
+                                <a href="{% url 'login' %}" class="text-success text-decoration-none fw-semibold">
+                                    Login here
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

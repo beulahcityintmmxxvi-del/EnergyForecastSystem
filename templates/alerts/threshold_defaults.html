@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+
+{% block title %}Threshold Defaults | Energy Forecast System{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+    <div>
+        <h1 class="page-title">Threshold Defaults</h1>
+        <p class="page-subtitle">Configure default alert thresholds for new buildings.</p>
+    </div>
+
+    <a href="{% url 'profile' %}" class="btn btn-outline-secondary">
+        <i class="fa-solid fa-arrow-left me-2"></i>Back to Profile
+    </a>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-12 col-lg-8">
+        <div class="card content-card p-4">
+            <form method="post">
+                {% csrf_token %}
+
+                <div class="mb-3">
+                    <label class="form-label">Monthly Threshold (kWh)</label>
+                    {{ form.monthly_threshold_kwh }}
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Spike Threshold (%)</label>
+                    {{ form.spike_threshold_percent }}
+                </div>
+
+                <div class="form-check mb-4">
+                    {{ form.active }}
+                    <label class="form-check-label ms-2">Active</label>
+                </div>
+
+                <button type="submit" class="btn btn-success">
+                    <i class="fa-solid fa-floppy-disk me-2"></i>Save Defaults
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

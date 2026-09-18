@@ -1,0 +1,158 @@
+{% extends 'base.html' %}
+
+{% block title %}Buildings | Energy Forecast System{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+    <div>
+        <h1 class="page-title">Buildings</h1>
+        <p class="page-subtitle">Search, filter, and manage institution buildings and departments.</p>
+    </div>
+
+    {% if can_manage %}
+    <a href="{% url 'building_create' %}" class="btn btn-success">
+        <i class="fa-solid fa-plus me-2"></i>Add Building
+    </a>
+    {% endif %}
+</div>
+
+<div class="card content-card p-4 mb-4">
+    <form method="get">
+        <div class="row g-3">
+            <div class="col-12 col-lg-8">
+                <label class="form-label">Search</label>
+                {{ filter_form.q }}
+            </div>
+
+            <div class="col-12 col-lg-4">
+                <label class="form-label">Sort By</label>
+                {{ filter_form.ordering }}
+            </div>
+        </div>
+
+        <div class="d-flex gap-2 flex-wrap mt-4">
+            <button type="submit" class="btn btn-success">
+                <i class="fa-solid fa-filter me-2"></i>Apply Filters
+            </button>
+            <a href="{% url 'building_list' %}" class="btn btn-outline-secondary">
+                Reset
+            </a>
+        </div>
+    </form>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card stat-card p-3">
+            <small class="text-muted">Matching Buildings</small>
+            <h3 class="mb-0">{{ total_buildings }}</h3>
+        </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card stat-card p-3">
+            <small class="text-muted">Total Related Records</small>
+            <h3 class="mb-0">{{ total_records }}</h3>
+        </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card stat-card p-3">
+            <small class="text-muted">Total Consumption</small>
+            <h3 class="mb-0">{{ total_consumption|floatformat:2 }} kWh</h3>
+        </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card stat-card p-3">
+            <small class="text-muted">Average Consumption</small>
+            <h3 class="mb-0">{{ avg_consumption|floatformat:2 }} kWh</h3>
+        </div>
+    </div>
+</div>
+
+<div class="card content-card p-3">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Name</th>
+                    <th>Code</th>
+                    <th>Description</th>
+                    <th>Records</th>
+                    <th>Total Consumption</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for building in buildings %}
+                <tr>
+                    <td class="fw-semibold">
+                        <a href="{% url 'building_detail' building.pk %}" class="text-decoration-none">
+                            {{ building.name }}
+                        </a>
+                    </td>
+                    <td>{{ building.code|default:"-" }}</td>
+                    <td>{{ building.description|default:"-"|truncatechars:35 }}</td>
+                    <td>{{ building.records_count|default:0 }}</td>
+                    <td>{{ building.total_consumption|default:0|floatformat:2 }}</td>
+                    <td class="text-end">
+                        <a href="{% url 'building_detail' building.pk %}" class="btn btn-sm btn-outline-secondary me-1">
+                            <i class="fa-solid fa-eye"></i>
+                        </a>
+
+                        {% if can_manage %}
+                        <a href="{% url 'building_update' building.pk %}" class="btn btn-sm btn-outline-primary me-1">
+                            <i class="fa-solid fa-pen-to-square"></i>
+                        </a>
+                        {% endif %}
+
+                        {% if can_admin %}
+                        <a href="{% url 'building_delete' building.pk %}" class="btn btn-sm btn-outline-danger">
+                            <i class="fa-solid fa-trash"></i>
+                        </a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center py-4 text-muted">
+                        No buildings match your current filters.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if buildings.has_other_pages %}
+    <nav class="mt-4">
+        <ul class="pagination justify-content-center flex-wrap mb-0">
+            {% if buildings.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1{% if query_string %}&{{ query_string }}{% endif %}">First</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ buildings.previous_page_number }}{% if query_string %}&{{ query_string }}{% endif %}">Previous</a>
+                </li>
+            {% endif %}
+
+            <li class="page-item active">
+                <span class="page-link">
+                    Page {{ buildings.number }} of {{ buildings.paginator.num_pages }}
+                </span>
+            </li>
+
+            {% if buildings.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ buildings.next_page_number }}{% if query_string %}&{{ query_string }}{% endif %}">Next</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ buildings.paginator.num_pages }}{% if query_string %}&{{ query_string }}{% endif %}">Last</a>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}

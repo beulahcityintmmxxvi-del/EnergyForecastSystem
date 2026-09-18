@@ -1,0 +1,269 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard | Energy Forecast System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .chart-wrapper {
+        position: relative;
+        width: 100%;
+        height: 320px;
+    }
+
+    @media (max-width: 768px) {
+        .chart-wrapper {
+            height: 260px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Dashboard</h1>
+    <p class="page-subtitle">Overview of energy usage, buildings, and forecasting insights.</p>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card stat-card p-3">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <small class="text-muted">Total Buildings</small>
+                    <h3 class="mb-0">{{ total_buildings|default:"0" }}</h3>
+                </div>
+                <div class="stat-icon bg-soft-primary">
+                    <i class="fa-solid fa-building"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card stat-card p-3">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <small class="text-muted">Energy Records</small>
+                    <h3 class="mb-0">{{ total_records|default:"0" }}</h3>
+                </div>
+                <div class="stat-icon bg-soft-success">
+                    <i class="fa-solid fa-plug-circle-bolt"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card stat-card p-3">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <small class="text-muted">Total Consumption</small>
+                    <h3 class="mb-0">{{ total_consumption|floatformat:2 }} kWh</h3>
+                </div>
+                <div class="stat-icon bg-soft-warning">
+                    <i class="fa-solid fa-bolt"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card stat-card p-3">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <small class="text-muted">Forecast Status</small>
+                    <h3 class="mb-0">Ready</h3>
+                </div>
+                <div class="stat-icon bg-soft-danger">
+                    <i class="fa-solid fa-chart-line"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card stat-card p-3">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <small class="text-muted">Open Alerts</small>
+                    <h3 class="mb-0">{{ open_alert_count|default:"0" }}</h3>
+                </div>
+                <div class="stat-icon bg-soft-danger">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card stat-card p-3">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <small class="text-muted">Critical Alerts</small>
+                    <h3 class="mb-0">{{ critical_alert_count|default:"0" }}</h3>
+                </div>
+                <div class="stat-icon bg-soft-warning">
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+<div class="row g-4 mb-4">
+    <div class="col-12 col-lg-8">
+        <div class="card content-card p-3">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h5 class="mb-0">Energy Consumption Trend</h5>
+                <span class="badge text-bg-success">Live Database Chart</span>
+            </div>
+
+            {% if has_chart_data %}
+            <div class="chart-wrapper">
+                <canvas id="energyTrendChart"></canvas>
+            </div>
+            {% else %}
+            <div class="alert alert-info mb-0">
+                No energy data available yet to display the trend chart.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="col-12 col-lg-4">
+        <div class="card content-card p-3 h-100">
+            <h5 class="mb-3">Quick Actions</h5>
+
+            <div class="d-grid gap-2">
+                <a href="{% url 'building_list' %}" class="btn btn-outline-secondary">
+                    <i class="fa-solid fa-building me-2"></i>View Buildings
+                </a>
+
+                <a href="{% url 'energy_list' %}" class="btn btn-outline-secondary">
+                    <i class="fa-solid fa-plug-circle-bolt me-2"></i>View Energy Records
+                </a>
+
+                <a href="{% url 'alerts_dashboard' %}" class="btn btn-outline-danger">
+                    <i class="fa-solid fa-triangle-exclamation me-2"></i>Alerts Dashboard
+                </a>
+
+                {% if can_manage %}
+                <a href="{% url 'comparison_dashboard' %}" class="btn btn-outline-success">
+                    <i class="fa-solid fa-chart-column me-2"></i>Compare Buildings
+                </a>
+
+                <a href="{% url 'forecast_dashboard' %}" class="btn btn-outline-primary">
+                    <i class="fa-solid fa-chart-line me-2"></i>Forecasting
+                </a>
+
+                <a href="{% url 'reports_dashboard' %}" class="btn btn-outline-dark">
+                    <i class="fa-solid fa-file-lines me-2"></i>Reports
+                </a>
+
+                <a href="{% url 'building_create' %}" class="btn btn-success">
+                    <i class="fa-solid fa-plus me-2"></i>Add Building
+                </a>
+
+                <a href="{% url 'energy_create' %}" class="btn btn-primary">
+                    <i class="fa-solid fa-plus me-2"></i>Add Energy Record
+                </a>
+                {% endif %}
+
+                {% if can_admin %}
+                <a href="/admin/" class="btn btn-outline-danger">
+                    <i class="fa-solid fa-user-shield me-2"></i>Open Admin
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card content-card p-3">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <h5 class="mb-0">Latest Energy Records</h5>
+        <span class="badge text-bg-light border">Recent 5</span>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Building</th>
+                    <th>Date</th>
+                    <th>Meter ID</th>
+                    <th>Consumption (kWh)</th>
+                    <th>Cost</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in latest_records %}
+                <tr>
+                    <td class="fw-semibold">
+                        <a href="{% url 'building_detail' record.building.pk %}" class="text-decoration-none">
+                            {{ record.building.name }}
+                        </a>
+                    </td>
+                    <td>{{ record.reading_date }}</td>
+                    <td>{{ record.meter_id|default:"-" }}</td>
+                    <td>{{ record.consumption_kwh }}</td>
+                    <td>{{ record.cost|default:"-" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="text-center py-4 text-muted">
+                        No records available yet.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if has_chart_data %}
+<script>
+    const labels = JSON.parse('{{ chart_labels_json|escapejs }}');
+    const values = JSON.parse('{{ chart_values_json|escapejs }}');
+
+    const ctx = document.getElementById('energyTrendChart');
+
+    if (ctx) {
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Consumption (kWh)',
+                    data: values,
+                    borderColor: '#16a34a',
+                    backgroundColor: 'rgba(22, 163, 74, 0.12)',
+                    fill: true,
+                    tension: 0.35,
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+</script>
+{% endif %}
+{% endblock %}

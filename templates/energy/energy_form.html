@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }} | Energy Forecast System{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">{{ title }}</h1>
+    <p class="page-subtitle">Record daily, weekly, or monthly energy consumption.</p>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-12 col-xl-9">
+        <div class="card content-card p-4">
+            <form method="post">
+                {% csrf_token %}
+
+                <div class="row g-3">
+                    <div class="col-12 col-md-6">
+                        <label class="form-label">Building</label>
+                        {{ form.building }}
+                        {% if form.building.errors %}
+                            <div class="text-danger small mt-1">{{ form.building.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                        <label class="form-label">Reading Date</label>
+                        {{ form.reading_date }}
+                        {% if form.reading_date.errors %}
+                            <div class="text-danger small mt-1">{{ form.reading_date.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                        <label class="form-label">Meter ID</label>
+                        {{ form.meter_id }}
+                        {% if form.meter_id.errors %}
+                            <div class="text-danger small mt-1">{{ form.meter_id.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                        <label class="form-label">Consumption (kWh)</label>
+                        {{ form.consumption_kwh }}
+                        {% if form.consumption_kwh.errors %}
+                            <div class="text-danger small mt-1">{{ form.consumption_kwh.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                        <label class="form-label">Cost</label>
+                        {{ form.cost }}
+                        {% if form.cost.errors %}
+                            <div class="text-danger small mt-1">{{ form.cost.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                        <label class="form-label">Peak Demand (kW)</label>
+                        {{ form.peak_demand_kw }}
+                        {% if form.peak_demand_kw.errors %}
+                            <div class="text-danger small mt-1">{{ form.peak_demand_kw.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label">Remarks</label>
+                        {{ form.remarks }}
+                        {% if form.remarks.errors %}
+                            <div class="text-danger small mt-1">{{ form.remarks.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2 flex-wrap mt-4">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fa-solid fa-floppy-disk me-2"></i>Save
+                    </button>
+                    <a href="{% url 'energy_list' %}" class="btn btn-outline-secondary">
+                        Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

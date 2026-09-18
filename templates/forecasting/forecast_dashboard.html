@@ -1,0 +1,204 @@
+{% extends 'base.html' %}
+
+{% block title %}Forecasting | Energy Forecast System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .chart-wrapper {
+        position: relative;
+        width: 100%;
+        height: 340px;
+    }
+
+    @media (max-width: 768px) {
+        .chart-wrapper {
+            height: 280px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Energy Forecasting</h1>
+    <p class="page-subtitle">
+        Generate future consumption predictions using historical energy data.
+    </p>
+</div>
+
+{% if not prophet_available %}
+<div class="alert alert-warning">
+    <strong>Prophet is not installed.</strong>
+    Forecast generation will not work until you install it:
+    <code>pip install prophet</code>
+</div>
+{% endif %}
+
+<div class="card content-card p-4 mb-4">
+    <form method="get">
+        <div class="row g-3 align-items-end">
+            <div class="col-12 col-md-5">
+                <label class="form-label">Building</label>
+                {{ form.building }}
+            </div>
+
+            <div class="col-12 col-md-4">
+                <label class="form-label">Forecast Period (Days)</label>
+                {{ form.periods }}
+            </div>
+
+            <div class="col-12 col-md-3">
+                <button type="submit" class="btn btn-success w-100">
+                    <i class="fa-solid fa-chart-line me-2"></i>Generate Forecast
+                </button>
+                <a href="{% url 'forecast_evaluation' %}" class="btn btn-outline-dark">
+                    <i class="fa-solid fa-vial me-2"></i>Evaluate Forecast
+                </a>
+            </div>
+        </div>
+    </form>
+</div>
+
+{% if not forecast_ready %}
+<div class="card content-card p-4">
+    <h5 class="mb-3">Forecast Setup</h5>
+    <p class="mb-2">
+        Select a building or keep <strong>All Buildings</strong> to forecast institution-wide consumption.
+    </p>
+    <p class="mb-0 text-muted">
+        You need at least <strong>3 historical records</strong> for Prophet forecasting to work properly.
+    </p>
+</div>
+{% endif %}
+
+{% if forecast_ready %}
+<div class="row g-4 mb-4">
+    <div class="col-12 col-lg-8">
+        <div class="card content-card p-3">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h5 class="mb-0">Forecast Chart</h5>
+                <span class="badge text-bg-success">{{ selected_building_label }}</span>
+            </div>
+
+            <div class="chart-wrapper">
+                <canvas id="forecastChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-lg-4">
+        <div class="card content-card p-3 h-100">
+            <h5 class="mb-3">Forecast Summary</h5>
+            <p class="mb-2"><strong>Scope:</strong> {{ selected_building_label }}</p>
+            <p class="mb-2"><strong>Forecast Days:</strong> {{ periods }}</p>
+            <p class="mb-2"><strong>Available History Points:</strong> {{ scope_records }}</p>
+            <p class="mb-0 text-muted">
+                This forecast is based on historical daily energy consumption data.
+            </p>
+        </div>
+    </div>
+</div>
+
+<div class="card content-card p-3">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <h5 class="mb-0">Future Forecast Values</h5>
+        <span class="badge text-bg-light border">Next {{ periods }} Days</span>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Date</th>
+                    <th>Predicted (kWh)</th>
+                    <th>Lower Bound</th>
+                    <th>Upper Bound</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in future_forecast_rows %}
+                <tr>
+                    <td>{{ row.ds }}</td>
+                    <td>{{ row.yhat }}</td>
+                    <td>{{ row.yhat_lower }}</td>
+                    <td>{{ row.yhat_upper }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="text-center py-4 text-muted">
+                        No forecast values available.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{% if forecast_ready %}
+<script>
+    const labels = JSON.parse('{{ chart_labels_json|escapejs }}');
+    const actualValues = JSON.parse('{{ actual_values_json|escapejs }}');
+    const forecastValues = JSON.parse('{{ forecast_values_json|escapejs }}');
+
+    const ctx = document.getElementById('forecastChart');
+
+    if (ctx) {
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Actual Consumption',
+                        data: actualValues,
+                        borderColor: '#2563eb',
+                        backgroundColor: 'rgba(37, 99, 235, 0.10)',
+                        tension: 0.35,
+                        fill: false,
+                        spanGaps: true
+                    },
+                    {
+                        label: 'Forecast',
+                        data: forecastValues,
+                        borderColor: '#16a34a',
+                        backgroundColor: 'rgba(22, 163, 74, 0.10)',
+                        borderDash: [8, 6],
+                        tension: 0.35,
+                        fill: false,
+                        spanGaps: true
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Energy Consumption (kWh)'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Date'
+                        }
+                    }
+                }
+            }
+        });
+    }
+</script>
+{% endif %}
+{% endblock %}
